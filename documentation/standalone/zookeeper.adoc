@@ -361,7 +361,7 @@ https://cwiki.apache.org/confluence/display/ZOOKEEPER/Client-Server+mutual+authe
 
 ==== ACL Authorization
 
-Zookeeper supports ACL rights to protect data stroed inside it. Apache Kafka can automatically configure the ACL rights
+Zookeeper supports ACL rights to protect data stored inside it. Apache Kafka can automatically configure the ACL rights
 for all Zookeeper records it creates so that nobody else can modify them. For more details see the Kafka installation
 part of this guide
 

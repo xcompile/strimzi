@@ -2,7 +2,7 @@
 Version 0.1
 :sectnums:
 :toc: preamble
-:toclevels: 4
+:toclevels: 3
 :toc-title: My Content
 :imagesdir: ./img
 
