@@ -191,10 +191,175 @@ http://zookeeper.apache.org/doc/current/zookeeperAdmin.html#sc_maintenance[docum
 
 === Security
 
+==== SASL Authentication
 
+By default Zookeeper doesn't use any form of authentication and allows anonymous connections. However it supports Java
+Authentication and Authorization Service (JAAS) which can be used to setup authentication using Simple Authentication
+and Security Layer (SASL). Zookeeper supports authentication using DIGEST-MD5 SASL mechanism with locally stored
+credentials or authentication using Kerberos.
+
+JAAS is configured using a separate configuration file. It is recommended to place the JAAS configuration file in the
+same directory as the Zookeeper configuration (`/opt/zookeeper/cong/`). The recommended file name is `jaas.conf`. When
+using Zookeeper cluster, the JAAS configuration file has to be created on all cluster nodes.
+
+SASL Authentication is configured separately for server to server communication (communication between Zookeeper
+instances) ad client to server communication (e.g. communication between Kafka and Zookeeper). The server to server
+authentication is relevant only for resilient Zookeeper clusters with multiple nodes.
+
+===== Server to Server authentication
+
+For server to server authentication the JAAS configuration file contains both parts: the server configuration as well as the
+client configuration. Each part fo the configuration has its own _context_. The context is configuration has following
+format:
+
+[source]
+----
+ContextName {
+       param1
+       param2;
+};
+----
+
+When using DIGEST-MD5 SASL mechanism the `QuorumServer` context needs to contain all the usernames and passwords in
+unencrypted form which will be allowed to connect. Second context `QuorumLearner` has to be configured to configure the
+client which is built into Zookeeper. It again contains the password in unencrypted form. An example of the JAAS
+configuration file for DIGEST-MD5 mechanism can be found below:
+
+[source]
+----
+QuorumServer {
+       org.apache.zookeeper.server.auth.DigestLoginModule required
+       user_zookeeper="123456";
+};
+
+QuorumLearner {
+       org.apache.zookeeper.server.auth.DigestLoginModule required
+       username="zookeeper"
+       password="123456";
+};
+----
+
+Alternatively Kerberos based authentication can be configured as well. Detailed guide for configuring Kerberos
+authentication is beyond the scope of this document.
+
+[source]
+----
+QuorumServer {
+       com.sun.security.auth.module.Krb5LoginModule required
+       useKeyTab=true
+       keyTab="/path/to/keytab"
+       storeKey=true
+       useTicketCache=false
+       debug=false
+       principal="zkquorum/fully.qualified.domain.name@EXAMPLE.COM";
+};
+
+QuorumLearner {
+       com.sun.security.auth.module.Krb5LoginModule required
+       useKeyTab=true
+       keyTab="/path/to/keytab"
+       storeKey=true
+       useTicketCache=false
+       debug=false
+       principal="learner/fully.qualified.domain.name@EXAMPLE.COM";
+};
+----
+
+In addition to the JAAS configuration file the server to server authentication needs to be also enabled in the regular
+Zookeeper configuration file. To enable it add following options:
+
+[source]
+----
+quorum.auth.enableSasl=true
+quorum.auth.learnerRequireSasl=true
+quorum.auth.serverRequireSasl=true
+quorum.auth.learner.loginContext=QuorumLearner
+quorum.auth.server.loginContext=QuorumServer
+quorum.cnxn.threads.size=20
+----
+
+Additionally, if Kerberos authentication is used the _Kerberos service principal_ has to be specified:
+
+[source]
+----
+quorum.auth.kerberos.servicePrincipal=servicename/_HOST
+----
+
+The JAAS configuration file has to be passed to the Zookeeper server as Java property. Environment variable
+`SERVER_JVMFLAGS` can be used for that:
+
+[source]
+----
+su - zookeeper
+SERVER_JVMFLAGS="-Djava.security.auth.login.config=/opt/zookeeper/conf/jaas.conf"; /opt/zookeeper/bin/zkServer.sh start conf/zoo.cfg
+----
+
+More details about server to server authentication can be found on the Zookeeper
+https://cwiki.apache.org/confluence/display/ZOOKEEPER/Server-Server+mutual+authentication[wiki].
+
+===== Client to Server authentication
+
+Client to server authentication is configured in the same JAAS file as the server to server authentication. However
+unlike the server to server authentication it contains only the server part. The client part of the configuration has
+to be done in the client. How to configure Kafka broker to connect to Zookeeper using authentication is described in the
+Kafka installation part of this guide.
+
+Another context has to be added to the JAAS configuration file to configure client to server authentication. This
+context has to be named `Server`. For DIGEST-MD5 mechanism it configures all usernames and password:
+
+[source]
+----
+Server {
+    org.apache.zookeeper.server.auth.DigestLoginModule required
+    user_super="123456"
+    user_kafka="123456";
+};
+----
+
+It is also possible to enable authentication using Kerberos:
+[source]
+----
+Server {
+       com.sun.security.auth.module.Krb5LoginModule required
+       useKeyTab=true
+       keyTab="/path/to/server/keytab"
+       storeKey=true
+       useTicketCache=false
+       principal="zookeeper/yourzkhostname";
+};
+----
+
+After configuring the JAAS context, client to server authentication needs to be enabled in the Zookeeper configuration
+file. To enable it following lines should be added:
+
+[source]
+----
+requireClientAuthScheme=sasl
+authProvider.1=org.apache.zookeeper.server.auth.SASLAuthenticationProvider
+authProvider.2=org.apache.zookeeper.server.auth.SASLAuthenticationProvider
+authProvider.3=org.apache.zookeeper.server.auth.SASLAuthenticationProvider
+----
+
+The `authProvider.ID` property has to be added for every server which is part of the Zookeeper cluster.
+
+The JAAS configuration file has to be passed to the Zookeeper server as Java property. Environment variable
+`SERVER_JVMFLAGS` can be used for that:
+
+[source]
+----
+su - zookeeper
+SERVER_JVMFLAGS="-Djava.security.auth.login.config=/opt/zookeeper/conf/jaas.conf"; /opt/zookeeper/bin/zkServer.sh start conf/zoo.cfg
+----
+
+More details about client to server authentication can be found on the Zookeeper
+https://cwiki.apache.org/confluence/display/ZOOKEEPER/Client-Server+mutual+authentication[wiki].
+
+==== ACL Authorization
+
+Zookeeper supports ACL rights to protect data stroed inside it. Apache Kafka can automatically configure the ACL rights
+for all Zookeeper records it creates so that nobody else can modify them. For more details see the Kafka installation
+part of this guide
 
 ==== TLS
 
 The latest version of Zookeeper currently doesn't support TLS for encryption or authentication.
-
-=== Verify Zookeeper health
