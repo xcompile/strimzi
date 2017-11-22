@@ -23,30 +23,24 @@ sudo groupadd zookeeper
 sudo useradd -g zookeeper zookeeper
 sudo passwd zookeeper
 ----
-. Create directory `/opt/zookeeper` and set its ownership to the `zookeeper` user:
+. Create directory `/opt/zookeeper`:
 +
 [source]
 ----
 sudo mkdir /opt/zookeeper
-sudo chown -R zookeeper:zookeeper /opt/zookeeper
 ----
 . Download the latest stable version from Apache Zookeeper http://zookeeper.apache.org/releases.html[download website]
-. Change the ownership of the downloaded archive and move it to the newly created directory
-(replace `x.x.x` for the downloaded version of Zookeeper - e.g. `3.4.11`):
+. Unpack the archive into `/opt/zookeeper` directory (replace `x.x.x` for the downloaded version of Zookeeper - e.g. `3.4.11`)
 +
 [source]
 ----
-sudo chown -R zookeeper:zookeeper zookeeper-x.x.x.tar.gz
-sudo mv zookeeper-x.x.x.tar.gz /opt/zookeeper
+sudo tar xvfz zookeeper-x.x.x.tar.gz -C /opt/zookeeper --strip-components=1
 ----
-. Unpack the archive and delete it (replace `x.x.x` for the downloaded version of Zookeeper - e.g. `3.4.11`)
+. Change the ownership of the `/opt/zookeeper` directory to the `zookeeper` user:
 +
 [source]
 ----
-su - zookeeper
-cd /opt/zookeeper
-tar xvfz zookeeper-x.x.x.tar.gz -C /opt/zookeeper --strip-components=1
-rm zookeeper-x.x.x.tar.gz
+sudo chown -R zookeeper:zookeeper /opt/zookeeper
 ----
 . Create directory `/var/lib/zookeeper` for storing Zookeeper data and set its ownership to the `zookeeper` user:
 +
@@ -58,21 +52,26 @@ sudo chown -R zookeeper:zookeeper /var/lib/zookeeper
 
 === Standalone configuration
 
-Zookeper can run in a standalone mode with only a single instance. However since Kafka broker is fully dependent on
-Zookeeper it will stop working almost immediately when the single Zookeeper instance becomes unavailable. Therefore the
-standalone configuration is not recommended for production use cases.
+
+
+Zookeeper can run in a standalone mode with only a single instance. However since Kafka broker is fully dependent on
+Zookeeper, using standalone configuration would create a single point of failure. Therefore the standalone configuration
+is not recommended for any production use cases.
 
 Zookeeper is using properties file for configuration. The most important configuration options are:
 
-`tickTime`:: Zookeeper's basic time unit (in milliseconds) used for heartbeats and session timeouts.
-`dataDir`:: The directory where Zookeeper data are stored. Should be set to `/var/lib/zookeeper/` directory created
-during installation.
+`tickTime`:: Zookeeper's basic time unit (in milliseconds) used for heartbeats and session timeouts (for example minimum
+session timeout will be two ticks).
+`dataDir`:: The directory where Zookeeper stores its transaction log and snapshots of its in-memory database. Should be
+set to `/var/lib/zookeeper/` directory created during installation.
 `clientPort`:: Port number where clients can connect. Defaults to `2181`.
 
 NOTE: The sample configuration file can be found in `conf/zoo_sample.cfg` in the Zookeeper installation directory.
 
+TIP: Consider putting the `dataDir` directory on separate disk device to minimize the latency in Zookeeper.
+
 Zookeeper configuration file should be located in `/opt/zookeeper/cong/zoo.cfg`. A basic example of the configuration
-file can be found below. The configuration file should be owned by the `zookeeper` user.
+file can be found below. The configuration file should be readable by the `zookeeper` user.
 
 [source]
 ----
@@ -101,7 +100,7 @@ To restart running Zookeeper instance following command can be used:
 [source]
 ----
 su - zookeeper
-/opt/zookeeper/bin/zkServer.sh stop conf/zoo.cfg
+/opt/zookeeper/bin/zkServer.sh restart conf/zoo.cfg
 ----
 
 === Replicated configuration
@@ -123,6 +122,9 @@ The different Zookeeper nodes should be ideally placed into different data cente
 number of Zookeeper nodes increases the workload spent on cluster synchronization. For most Kafka use cases Zookeeper
 cluster with 3, 5 or 7 nodes should be fully sufficient.
 
+WARNING: Zookeeper cluster with 3 nodes can tolerate only 1 unavailable node. This means that when one cluster node
+crashes while you are doing maintenance on another node your Zookeeper cluster will be unavailable.
+
 Replicated Zookeeper configuration supports all configuration options supported by the standalone configuration.
 Additional options are added for the cluster configuration:
 
@@ -136,8 +138,8 @@ the Zookeeper cluster. The server records should be specified in the format `ser
 
 `id`:: is the ID of the Zookeeper cluster node.
 `hostname`:: is the hostname or IP address where the node listens for connections.
-`port1`:: is the number of the port used for intercluster communication.
-`port2`:: is the bumber of the port used for leader election.
+`port1`:: is the number of the port used for inter-cluster communication.
+`port2`:: is the number of the port used for leader election.
 
 Following example shows how the configuration file for Zookeeper cluster might look like:
 
@@ -169,7 +171,8 @@ Zookeeper instance.
 Follow this procedure *on each node* to start replicated Zookeeper cluster:
 
 . Create the `myid` file as described above.
-. Create the configuration file with list of all cluster members as described above.
+. Create the configuration file with list of all cluster members as described above. This file should be identical on
+all nodes.
 . Start the instance using:
 +
 [source]
@@ -180,10 +183,10 @@ su - zookeeper
 
 === Additional configuration options
 
-Following options should be consider depending on the exact usecase scenario:
+Following options should be consider depending on the exact use case:
 
 `maxClientCnxns`:: Maximal number of simultaneously connected clients.
-`autopurge.snapRetainCount`:: Number of data snapshots which will be retained. Default value is `3`.
+`autopurge.snapRetainCount`:: Number of snapshots of Zookeeper in-memory database which will be retained. Default value is `3`.
 `autopurge.purgeInterval`:: Interval in hours for puring snapshots. Default value is `0` (auto-purging disabled).
 
 All available configuration options can be found in Apache Zookeeper
@@ -240,7 +243,8 @@ QuorumLearner {
 ----
 
 Alternatively Kerberos based authentication can be configured as well. Detailed guide for configuring Kerberos
-authentication is beyond the scope of this document.
+authentication is beyond the scope of this document. More details about Kerberos configuration can be found in the
+https://docs.oracle.com/javase/7/docs/jre/api/security/jaas/spec/com/sun/security/auth/module/Krb5LoginModule.html[JAAS documentation].
 
 [source]
 ----
@@ -316,7 +320,8 @@ Server {
 };
 ----
 
-It is also possible to enable authentication using Kerberos:
+It is also possible to enable authentication using Kerberos. More details about Kerberos configuration can be found in the
+https://docs.oracle.com/javase/7/docs/jre/api/security/jaas/spec/com/sun/security/auth/module/Krb5LoginModule.html[JAAS documentation].
 [source]
 ----
 Server {
