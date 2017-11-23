@@ -26,9 +26,7 @@ Zookeeper cluster has to be ready.
 
 include::zookeeper.adoc[]
 
-== Apache Kafka broker
-
-Describe installation of HA Kafka broker and the basic configuration.
+include::kafka-broker.adoc[]
 
 == Apache Kafka Connect
 

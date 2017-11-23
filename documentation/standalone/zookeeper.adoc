@@ -52,8 +52,6 @@ sudo chown -R zookeeper:zookeeper /var/lib/zookeeper
 
 === Standalone configuration
 
-
-
 Zookeeper can run in a standalone mode with only a single instance. However, since Kafka broker is fully dependent on
 Zookeeper, using a standalone configuration creates a single point of failure. Therefore the standalone configuration
 is not recommended for any production use cases.
