@@ -201,13 +201,221 @@ explain in more detail how to configure TLS and SASL.
 
 ===== TLS encryption and authentication
 
+In order to use TLS encryption and server authentication, a keystore containing private and public keys has to be provided. This is usually done
+using a file in the Java Keystore (JKS) format. A path to this file is set in property `ssl.keystore.location`. Property
+`ssl.keystore.password` should be used to set the password protecting the keystore. For example:
+
+[source]
+ssl.keystore.location=/path/to/keystore/server-1.jks
+ssl.keystore.password=123456
+
+In some cases, additional password is used to protect the private key. such password can be set using property
+`ssl.key.password`.
+
+TIP: Kafka is able use keys signed by certification authorities as well as self-signed keys. Using keys signed by
+certification authorities should be always the preferred method. In order to allow clients to verify the identity of the
+Kafka broker they are connecting to, the certificate should always contain the advertised hostname(s) as its Common Name
+(CN) or in the Subject Alternative Names (SAN).
+
+In addition to the keystore, a truststore with public keys can be provided to the broker. These keys can be used to
+authenticate clients connecting to the broker. The truststore should be provided in Java Keystore (JKS) format and
+should contain public keys of the certification authorities. All clients with public and private keys signed by one of
+the certification authorities included in the truststore will be able to pass the authentication. The location of the
+truststore is set using field `ssl.truststore.location`. In case the truststore is password protected, the password
+should be set in property `ssl.truststore.password`. For example:
+
+[source]
+ssl.truststore.location=/path/to/keystore/server-1.jks
+ssl.truststore.password=123456
+
+Once the truststore is configured, TLS client authentication has to be enabled using property `ssl.client.auth`. This
+property can be set to three different values:
+
+`none`:: TLS client authentication is switched off. (Default value)
+`requested`:: TLS client authentication is optional. Clients will be asked to authenticate using TLS client certificate
+but they can choose not to.
+`required`:: Clients are required to authenticate using TLS client certificate.
+
+When client authenticates using TLS client authentication the authenticated principal name is the distinguished name
+from the authenticated client certificate. When TLS client authentication is not used and SASL is disabled, the
+principal name will be `ANONYMOUS`.
+
+It is possible to use different SSL configuration for different listeners. All options starting with `ssl.` can be
+prefixed with `listener.name.<NameOfTheListener>`. This will override the default SSL configuration for the specific
+listener. The following example shows how to use different SSL configuration for different listeners:
+
+[source]
+----
+listeners=INT1://:9092,INT2://:9093,REPLICATION://:9094
+listener.security.protocol.map=INT1:SSL,INT2:SSL,REPLICATION:SSL
+
+# Default configuration - will be used for listeners INT1 and INT2
+ssl.keystore.location=/path/to/keystore/server-1.jks
+ssl.keystore.password=123456
+
+# Different configuration for listener REPLICATION
+listener.name.replication.ssl.keystore.location=/path/to/keystore/server-1.jks
+listener.name.replication.ssl.keystore.password=123456
+listener.name.replication.ssl.truststore.location=/path/to/keystore/server-1.jks
+listener.name.replication.ssl.truststore.password=123456
+listener.name.replication.ssl.client.auth=required
+----
+
+In addition to the main TLS configuration options described above, Kafka support many options for fine tuning the TLS
+configuration. For example to enable of disable TLS / SSL protocols or cipher suites.
+
+`ssl.cipher.suites`:: List of cipher suites which should be enabled. Cipher suite is a combination of authentication,
+encryption, MAC and key exchange algorithmes used for the TLC connection. By default all available cipher suites are
+enabled.
+`ssl.enabled.protocols`:: List of enabled TLS / SSL protocols. Defaults to `TLSv1.2,TLSv1.1,TLSv1`.
+
+A list of all available TLS configuration options can be found on the
+http://kafka.apache.org/documentation/#configuration[Apache Kafka website].
+
+===== Kafka authentication
+
+Kafka supports authentication Simple Authentication and Security Layer (SASL). SASL in Kafka is implemented using JAAS.
+SASL authentication is supported both through plain unecnrypted connections as well as through TLS connections. SASL can
+be enabled individually for each listener. To enable it, the security protocol in `listener.security.protocol.map` has
+to be either `SASL_PLAINTEXT` or `SASL_SSL`.
+
+SASL authentication in Kafka support three different mechanisms:
+
+- `PLAIN` mechanism implements authentication based on username and passwords. Usernames and passwords are stored
+locally in Kafka configuration.
+- `SCRAM` mechanism implements authentication using Salted Challenge Response Authentication Mechanism. SCRAM
+credentials are stored centrally in Zookeeper. SCRAM can be used in situations where Zookeeper clster nodes are running
+isolated in private network.
+- `GSSAPI` mechanism implementes authentication gaainst Kerberos server.
+
+TIP: `PLAIN` mechanism is sending username and password in unencrypted format. It should be therefore used only in
+combination with TLS encryption.
+
+The SASL mechanisms are configured via the JAAS configuration file. Kafka is using the JAAS context named `KafkaServer`.
+After they are configured in JAAS the SASL mechanisms have to be enabled in Kafka configuration. This is done in the
+`sasl.enabled.mechanisms` property field. This field can contain a comma separated list of enabled mechanisms:
+
+[source]
+sasl.enabled.mechanisms=PLAIN,SCRAM-SHA-256,SCRAM-SHA-512
+
+In case the listener used for inter-broker communication is using SASL, the property `sasl.mechanism.inter.broker.protocol`
+has to be used to specify the SASL mechanism which it should use. For example:
+
+[source]
+sasl.mechanism.inter.broker.protocol=PLAIN
+
+The username and password which will be used for the inter-broker communication have to be specified in the `KafkaServer`
+JAAS context using the field `username` and `password`.
+
+To use PLAIN mechanism the usernames and password which are allowed to connect are specified directly in the JAAS
+context. The following example shows the context configured for SASL PLAIN authentication. The example configures three
+different users:
+
+- `admin`
+- `user1`
+- `user2`
+
+[source]
+----
+KafkaServer {
+    org.apache.kafka.common.security.plain.PlainLoginModule required
+    user_admin="123456"
+    user_user1="123456"
+    user_user2="123456";
+};
+----
+
+CAUTION: To avoid authentication problems, the credentials should be kept in sync between different Kafka brokers.
+
+In case SASL PLAIN would be also used for inter-broker authentication, the username `admin` and password `123456` should
+be added to the JAAS context:
+
+[source]
+----
+KafkaServer {
+    org.apache.kafka.common.security.plain.PlainLoginModule required
+    username="admin"
+    password="123456"
+    user_admin="123456"
+    user_user1="123456"
+    user_user2="123456";
+};
+----
+
+SCRAM authentication in Kafka consists of two mechanisms: `SCRAM-SHA-256` and `SCRAM-SHA-512`. These mechanism differ
+only in the hashing algorithm used - SHA-256 versus stronger SHA-512. To enable SCRAM authentication following
+configuration has to be added to the JAAS configuration file:
+
+[source]
+KafkaServer {
+    org.apache.kafka.common.security.scram.ScramLoginModule required;
+};
+
+When enabling the SASL authentication in Kafka configuration file, both SCRAM mechanisms can be listed. However only one
+of them can be chosen for the inter-broker communication. For example:
+
+[source]
+sasl.enabled.mechanisms=SCRAM-SHA-256,SCRAM-SHA-512
+sasl.mechanism.inter.broker.protocol=SCRAM-SHA-512
+
+User credentials or the SCRAM mechanism are stored in Zookeeper. Command line tool `kafka-configs.sh` can be used to
+manage them. For example to add user `user1` with password `123456`, following command can be used:
+
+[source]
+bin/kafka-configs.sh --zookeeper zookeepermy-domain.com:2181 --alter --add-config 'SCRAM-SHA-256=[password=123456],SCRAM-SHA-512=[password=123456]' --entity-type users --entity-name user1
+
+To delete a user credential use:
+
+[source]
+bin/kafka-configs.sh --zookeeper localhost:2181 --alter --delete-config 'SCRAM-SHA-512' --entity-type users --entity-name user1
+
+SASL mechanism used for authentication using KErberos is called `GSSAPI`. To configure Kerberos SASL authentication,
+following configuration should be added to the JAAS configuration file:
+
+[source]
+KafkaServer {
+    com.sun.security.auth.module.Krb5LoginModule required
+    useKeyTab=true
+    storeKey=true
+    keyTab="/etc/security/keytabs/kafka_server.keytab"
+    principal="kafka/kafka1.hostname.com@EXAMPLE.COM";
+};
+
+In addition to the JAAS configuration, Kerberos service name needs to be specified in property
+`sasl.kerberos.service.name` in Kafka configuration:
+
+[source]
+sasl.enabled.mechanisms=GSSAPI
+sasl.mechanism.inter.broker.protocol=GSSAPI
+sasl.kerberos.service.name=kafka
+
+Kafka can use multiple SASL mechanisms at the same time. The different JAAS confiugrations can be all added to the same context:
+
+[source]
+----
+KafkaServer {
+    org.apache.kafka.common.security.plain.PlainLoginModule required
+    user_admin="123456"
+    user_user1="123456"
+    user_user2="123456";
+
+    com.sun.security.auth.module.Krb5LoginModule required
+    useKeyTab=true
+    storeKey=true
+    keyTab="/etc/security/keytabs/kafka_server.keytab"
+    principal="kafka/kafka1.hostname.com@EXAMPLE.COM";
+
+    org.apache.kafka.common.security.scram.ScramLoginModule required;
+};
+----
+
+When multiple mechanisms are enabled, clients will be able to choose the mechanism which they want to use.
+
+===== Kafka authorization
 
 
-===== Kafka authentication and authorization
 
-
-
-===== Zookeeper authentication and authorization
+===== Zookeeper authentication
 
 Apache Zookeeper can be configured to use SASL based authentication. SASL authentication for Zookeeper connections has
 to be configured in the JAAS configuration file. By default Kafka will use the JAAS context named `Client` for
@@ -243,6 +451,8 @@ Client {
 
 More information about JAAS configuration can be found in the
 https://docs.oracle.com/javase/7/docs/jre/api/security/jaas/spec/com/sun/security/auth/module/Krb5LoginModule.html[JAAS documentation].
+
+===== Zookeeper authorization
 
 When authentication is enabled between Kafka and Zookeeper, Kafka can be configured to automatically protect all its
 records with ACLs rules which will allow only the Kafka user to change the data. All other users will have read only

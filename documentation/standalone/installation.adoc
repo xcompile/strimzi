@@ -32,7 +32,7 @@ include::kafka-broker.adoc[]
 
 Describe installation of standalone Kafka Connect and distributed Kafka connect cluster and the basic configuration.
 
-== Apache Kafka Producr and Consumer APIs
+== Apache Kafka Producer and Consumer APIs
 
 Describe how to use Kafka clients (add dependencies to pom.xml).
 
