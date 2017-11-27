@@ -87,6 +87,15 @@ su - zookeeper
 /opt/zookeeper/bin/zkServer.sh start conf/zoo.cfg
 ----
 
+The `start` command will start the Zookeeper server in the background. To run Zookeeper attached to the terminal,
+`start` can be replaced with `start-foreground`:
+
+[source]
+----
+su - zookeeper
+/opt/zookeeper/bin/zkServer.sh start-foreground conf/zoo.cfg
+----
+
 To stop running Zookeeper instance following command can be used:
 [source]
 ----
@@ -293,7 +302,7 @@ The `SERVER_JVMFLAGS` environment variable can be used for that:
 [source]
 ----
 su - zookeeper
-SERVER_JVMFLAGS="-Djava.security.auth.login.config=/opt/zookeeper/conf/jaas.conf"; /opt/zookeeper/bin/zkServer.sh start conf/zoo.cfg
+export SERVER_JVMFLAGS="-Djava.security.auth.login.config=/opt/zookeeper/conf/jaas.conf"; /opt/zookeeper/bin/zkServer.sh start conf/zoo.cfg
 ----
 
 More details about server-to-server authentication can be found on the Zookeeper
@@ -351,7 +360,7 @@ The `SERVER_JVMFLAGS` environment variable can be used for that:
 [source]
 ----
 su - zookeeper
-SERVER_JVMFLAGS="-Djava.security.auth.login.config=/opt/zookeeper/conf/jaas.conf"; /opt/zookeeper/bin/zkServer.sh start conf/zoo.cfg
+export SERVER_JVMFLAGS="-Djava.security.auth.login.config=/opt/zookeeper/conf/jaas.conf"; /opt/zookeeper/bin/zkServer.sh start conf/zoo.cfg
 ----
 
 More details about client to server authentication can be found on the Zookeeper
