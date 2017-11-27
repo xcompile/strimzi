@@ -362,12 +362,12 @@ User credentials or the SCRAM mechanism are stored in Zookeeper. Command line to
 manage them. For example to add user `user1` with password `123456`, following command can be used:
 
 [source]
-bin/kafka-configs.sh --zookeeper zookeepermy-domain.com:2181 --alter --add-config 'SCRAM-SHA-256=[password=123456],SCRAM-SHA-512=[password=123456]' --entity-type users --entity-name user1
+bin/kafka-configs.sh --zookeeper zoo1.my-domain.com:2181 --alter --add-config 'SCRAM-SHA-256=[password=123456],SCRAM-SHA-512=[password=123456]' --entity-type users --entity-name user1
 
 To delete a user credential use:
 
 [source]
-bin/kafka-configs.sh --zookeeper localhost:2181 --alter --delete-config 'SCRAM-SHA-512' --entity-type users --entity-name user1
+bin/kafka-configs.sh --zookeeper zoo1.my-domain.com:2181 --alter --delete-config 'SCRAM-SHA-512' --entity-type users --entity-name user1
 
 SASL mechanism used for authentication using KErberos is called `GSSAPI`. To configure Kerberos SASL authentication,
 following configuration should be added to the JAAS configuration file:
@@ -413,7 +413,233 @@ When multiple mechanisms are enabled, clients will be able to choose the mechani
 
 ===== Kafka authorization
 
+Kafka broker has out of the box support for authorization. It is implemented as Access Control List (ACL) - set of rules
+describing what used can and cannot do. The ACL rules are stored in Zookeeper.
 
+To enable Authorization / ACLs, the property `authorizer.class.name` has to be specified. It has to contain a fully
+qualified name of the Authorizer class. For the build in authorizer, the fully qualified name is `kafka.security.auth.SimpleAclAuthorizer`:
+
+[source]
+authorizer.class.name=kafka.security.auth.SimpleAclAuthorizer
+
+The structure of the ACL rule is following: _Principal `P` is allowed / denied operation `O` on resource `R` from host
+`H`._ When no rules are present for given resource, all actions are denied. This behavior can be changed by setting the
+property `allow.everyone.if.no.acl.found` to `true` in Kafka configuration file.
+
+A set of users can be defined as _super users_. Super users are allowed to take all actions regardless of the ACL
+rules. Super users are defined in Kafka configuration file using the property `super.users`. Users are defined using
+their principals. For example:
+
+[source]
+super.users=User:admin,User:operator
+
+Principal is the identity of the user and its exact format depends on the authentication mechanism:
+
+- Clients which connected to Kafka without authentication will have principal `User:ANONYMOUS`.
+- Users who connected using simple authentication mechanisms such as PLAIN or SCRAM will have principal consisting of
+the string `User:` and their username. For example `User:admin` or `User:user1`.
+- Users authenticated using TLS client authentication will have the principal based on the Distinguished Name of their
+client certificate. For example `User:CN=user1,O=MyCompany,L=Prague,C=CZ`.
+- Users authenticated using Kerberos their default username will be the primary part of their Kerberos principal.
+Property `sasl.kerberos.principal.to.local.rules` can be used to configure how will the Kafka principal built from the
+Kerberos principal.
+
+Kafka ACLs can be applied to 3 different types of resources:
+
+- Topics
+- Consumer Groups
+- Cluster
+
+It supports several different operations:
+
+- Read
+- Write
+- Create
+- Delete
+- Alter
+- Describe
+- ClusterAction
+- All
+
+Not every operation can be applied to every resource. Following table shows which resources support which operations:
+
+|===
+| |Topics | Consumer Groups |Cluster
+
+|Read
+|X|X|
+
+|Write
+|X||
+
+|Create
+||X|
+
+|Delete
+|X||
+
+|Alter
+|X||
+
+|Describe
+|X||X
+
+|ClusterAction
+|||X
+
+|All
+|X|X|X
+
+|===
+
+Management of ACL rules is done using `kafka-acls.sh` utility which is part of the Kafka distribution package. It can
+add, list and remove ACL rules. `kafka-acls.sh` contains three primary options for these functions:
+
+|===
+|Option |Type | Description |Default
+
+|`--add`
+|Action
+|Add ACL rule
+|
+
+|`--remove`
+|Action
+|Remove ACL rile
+|
+
+|`--list`
+|Action
+|List ACL rules
+|
+
+|`--authorizer-properties`
+|Configuration
+|key=val pairs that will be passed to authorizer for initialization. For the default authorizer the example values are:
+`zookeeper.connect=zoo1.my-domain.com:2181`.
+|
+
+|`--cluster`
+|Resource
+|Specifies cluster as an ACL resource.
+|
+
+|`--topic`
+|Resource
+|Specifies topic name as an ACL resource. `*` can be used as a wildcard which translates to "all topics". Multiple
+`--topic` options can be specified in single command.
+|
+
+|`--group`
+|Resource
+|Specifies consumer group name as an ACL resource. Multiple `--group` options can be specified in single command.
+|
+
+|`--allow-principal`
+|Principal
+| Principal which will be added to an allow ACL rule. Multiple `--allow-principal` options can be specified in single
+command.
+|
+
+|`--deny-principal`
+|Principal
+| Principal which will be added to a deny ACL rule. Multiple `--deny-principal` options can be specified in single
+command.
+|
+
+|`--allow-host`
+|Host
+|IP address from which principals listed in `--allow-principal` will be allowed. `--deny-host` can be only specified as
+IP address. Hostnames or CIDR ranges are not supported.
+|If `--allow-principal` is specified defaults to `*` which translates to "all hosts".
+
+|`--deny-host`
+|Host
+|IP address from which principals listed in `--deny-principal` will be denied. `--deny-host` can be only specified as IP
+address. Hostnames or CIDR ranges are not supported.
+|if `--deny-principal` is specified defaults to `*` which translates to "all hosts"
+
+|`--operation`
+|Operation
+|An operation which will be allowed or denied. Multiple `--operation` options can be specified in single command.
+|All
+
+|`--producer`
+|Convenience
+|A shortcut to allow or deny all operations needed by a message producer (WRITE and DESCRIBE on topic, CREATE
+on cluster).
+|
+
+|`--consumer`
+|Convenience
+|A shortcut to allow or deny all operations needed by a message consumer (READ and DESCRIBE on topic, READ on consumer
+group)
+|
+
+|`--force`
+|Convenience
+|Assume yes to all queries and do not prompt.
+|
+
+|===
+
+Following examples show how to use `kafka-acls.sh` to manage ACL rules:
+
+- Adding ACL rules
++
+[source]
+----
+# Allow user1 and user2 read from topic myTopic using consumer group MyConsumerGroup
+bin/kafka-acls.sh --authorizer-properties zookeeper.connect=zoo1.my-domain.com:2181 --add --operation Read --topic myTopic --allow-principal User:user1 --allow-principal User:user2
+bin/kafka-acls.sh --authorizer-properties zookeeper.connect=zoo1.my-domain.com:2181 --add --operation Describe --topic myTopic --allow-principal User:user1 --allow-principal User:user2
+bin/kafka-acls.sh --authorizer-properties zookeeper.connect=zoo1.my-domain.com:2181 --add --operation Read --operation Describe --group MyConsumerGroup --allow-principal User:user1 --allow-principal User:user2
+
+# Deny user1 to read the topic from IP address 127.0.0.1
+bin/kafka-acls.sh --authorizer-properties zookeeper.connect=zoo1.my-domain.com:2181 --add --operation Describe --operation Read --topic myTopic --group MyConsumerGroup --deny-principal User:user1 --deny-host 127.0.0.1
+
+# Add principal as consumer
+bin/kafka-acls.sh --authorizer-properties zookeeper.connect=zoo1.my-domain.com:2181 --add --consumer --topic myTopic --group MyConsumerGroup --allow-principal User:user1
+----
+- Removing ACL rules
++
+[source]
+----
+# Remove principal as consumer
+bin/kafka-acls.sh --authorizer-properties zookeeper.connect=zoo1.my-domain.com:2181 --remove --consumer --topic myTopic --group MyConsumerGroup --allow-principal User:user1
+
+# Deny user1 to read the topic from IP address 127.0.0.1
+bin/kafka-acls.sh --authorizer-properties zookeeper.connect=zoo1.my-domain.com:2181 --remove --operation Describe --operation Read --topic myTopic --group MyConsumerGroup --deny-principal User:user1 --deny-host 127.0.0.1
+
+# Allow user1 and user2 read from topic myTopic using consumer group MyConsumerGroup
+bin/kafka-acls.sh --authorizer-properties zookeeper.connect=zoo1.my-domain.com:2181 --remove --operation Read --topic myTopic --allow-principal User:user1 --allow-principal User:user2
+bin/kafka-acls.sh --authorizer-properties zookeeper.connect=zoo1.my-domain.com:2181 --remove --operation Describe --topic myTopic --allow-principal User:user1 --allow-principal User:user2
+bin/kafka-acls.sh --authorizer-properties zookeeper.connect=zoo1.my-domain.com:2181 --remove --operation Read --operation Describe --group MyConsumerGroup --allow-principal User:user1 --allow-principal User:user2
+----
+- Listing ACL rules
++
+[source]
+----
+$ bin/kafka-acls.sh --authorizer-properties zookeeper.connect=zoo1.my-domain.com:2181 --list --topic myTopic
+Current ACLs for resource `Topic:myTopic`:
+        User:user1 has Allow permission for operations: Read from hosts: *
+        User:user2 has Allow permission for operations: Read from hosts: *
+        User:user2 has Deny permission for operations: Read from hosts: 127.0.0.1
+        User:user1 has Allow permission for operations: Describe from hosts: *
+        User:user2 has Allow permission for operations: Describe from hosts: *
+        User:user2 has Deny permission for operations: Describe from hosts: 127.0.0.1
+----
+
+To make sure topic replication works as expected, Kafka broker nodes have to be allowed to:
+
+- Allowed to do `ClusterAction` on cluster
+- Allowed to `Read` from all topics (`*`).
+
+To add such ACL rules, following ACL rules can be used (principal should be adapted according to the actual cluster
+configuration):
+
+[source]
+bin/kafka-acls.sh --authorizer-properties zookeeper.connect=zoo1.my-domain.com:2181 --add --operation Clusteraction --cluster --allow-principal User:kafka
+bin/kafka-acls.sh --authorizer-properties zookeeper.connect=zoo1.my-domain.com:2181 --add --operation Read --topic "*"
 
 ===== Zookeeper authentication
 
@@ -421,7 +647,7 @@ Apache Zookeeper can be configured to use SASL based authentication. SASL authen
 to be configured in the JAAS configuration file. By default Kafka will use the JAAS context named `Client` for
 connecting to Zookeeper. If needed the context can be changed using system property `zookeeper.sasl.clientconfig`.
 
-TIP: The Apache Zookeeper section of this document described in detail how to enabled authentication in Zookeeper.
+TIP: The Apache Zookeeper section of this document described in detail how to enable authentication in Zookeeper.
 
 The `Client` context should configure either the `PLAIN` SASL mechanism or Kerberos depending on the Zookeeper
 configuration. The following example shows the configuration for SASL `PLAIN`:
@@ -526,6 +752,8 @@ to be considered successful. If this minimum cannot be met, then the producer wi
 is `2`.
 
 ===== Default configuration
+
+
 
 ===== New topics configuration
 
