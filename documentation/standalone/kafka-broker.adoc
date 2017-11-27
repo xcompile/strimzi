@@ -737,6 +737,78 @@ not be deleted:
 delete.topic.enable=false
 ----
 
+Auto-created topics will use the default topic configuration which can be specified in broker properties file. However
+when creating topics manually, their configuration can be specified at creation time. The main topic configuration
+options for manually created topics are:
+
+`cleanup.policy`:: Configures the retention policy which can be `delete` or `compact`. The `delete` policy will delete
+old records. The `compact` policy will enable log compaction. More information about log compaction can be found on
+http://kafka.apache.org/documentation/#compaction[Kafka website]. Default value is `delete`.
+`compression.type`:: Specifies the compression which is used for stored messages. Valid values are `gzip`, `snappy`,
+`lz4`, `uncompressed` (no compression) and `producer` (retain the compression codec used by the producer). Default value
+is `producer`.
+`max.message.bytes`:: Largest batch of messages allowed by Kafka broker. Default value is `1000012`.
+`min.insync.replicas`:: The minimum number of replicas which must be in sync for a write to be considered successful.
+Default value is `1`.
+`retention.ms`:: Maximum number of milliseconds for which log segments will be retained. Log segments older than this
+value will be deleted. Default value is `604800000` (7 days).
+`retention.bytes`:: Maximum number of bytes a partition will retain. Once the partition size grows over this limit, the
+oldest log segments will be deleted. Value of `-1` indicates no limit. Default value is `-1`.
+`segment.bytes`:: File size of a single log segment file in bytes. Default value is `1073741824` bytes (1 gibibyte).
+
+Similar options are available to configure the default settings for auto-created topics:
+
+`log.cleanup.policy`:: See `cleanup.policy` above.
+`compression.type`:: See `compression.type` above.
+`message.max.bytes`:: See `max.message.bytes` above.
+`min.insync.replicas`:: See `min.insync.replicas` above.
+`log.retention.ms`:: See `retention.ms` above.
+`log.retention.bytes`:: See `retention.bytes` above.
+`log.segment.bytes`:: See `segment.bytes` above.
+`default.replication.factor`:: Default replication factor for automatically created topics. Default value is `1`.
+`num.partitions`:: Default number of partitions for automatically created topics. Default value is `1`.
+
+===== Topic management
+
+Tool `kafka-topics.sh` can be used to create, list and delete topics. `kafka-topics.sh` is part of Kafka distribution.
+Following examples show how to create, list, describe and delete a topic:
+
+Adding topics::
++
+[source]
+bin/kafka-topics.sh --zookeeper zoo1.my-domain.com:2181 --create --topic myTopic --partitions 50 --replication-factor 3 --config cleanup.policy=compact --config min.insync.replicas=2
+
+List topics::
++
+[source]
+bin/kafka-topics.sh --zookeeper zoo1.my-domain.com:2181 --list
+
+Describing topic::
++
+[source]
+bin/kafka-topics.sh --zookeeper zoo1.my-domain.com:2181 --describe --topic myTopic
+
+Deleting topic::
++
+[source]
+bin/kafka-topics.sh --zookeeper zoo1.my-domain.com:2181 --delete --topic myTopic
+
+Another tool `kafka-configs.sh` can be used to see the topic configuration:
+
+[source]
+bin/kafka-configs.sh --zookeeper zoo1.my-domain.com:2181 --entity-type topics --entity-name myTopic --describe
+
+The same tool can be used to change topic configuration as well:
+
+[source]
+bin/kafka-configs.sh --zookeeper zoo1.my-domain.com:2181 --entity-type topics --entity-name myTopic --alter --add-config min.insync.replicas=1
+
+It can be also used to remove a specific configuration value. Once the configuration override is removed, the default
+value will be used:
+
+[source]
+bin/kafka-configs.sh --zookeeper zoo1.my-domain.com:2181  --entity-type topics --entity-name myTopic --alter --delete-config min.insync.replicas
+
 ===== Internal topics
 
 Kafka has several internal topics. These are used to store consumer offsets (`__consumer_offsets`) or transaction state
@@ -750,14 +822,6 @@ and `transaction.state.log.`. The most important configuration options are:
 `transaction.state.log.min.isr`:: Minimum number of replicas that must acknowledge a write to `__transaction_state` topic
 to be considered successful. If this minimum cannot be met, then the producer will fail with an exception. Default value
 is `2`.
-
-===== Default configuration
-
-
-
-===== New topics configuration
-
-===== Altering configuration
 
 ==== Other configuration options
 
