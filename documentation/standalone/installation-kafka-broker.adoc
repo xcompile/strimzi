@@ -60,7 +60,7 @@ sudo chown -R kafka:kafka /var/lib/kafka
 Kafka is using properties file to store configuration. The recommended location for the configuration file is
 `/opt/kafka/config/kafka.properties`. The configuration file should be readable by the `kafka` user.
 
-NOTE: The sample configuration file can be found in `conf/server.properties` in Kafka installation directory.
+NOTE: The sample configuration file can be found in `config/server.properties` in Kafka installation directory.
 
 Each broker needs to be assigned an unique broker id. The broker id has to be an integer equal or higher than 0. The
 broker id is used to identify the brokers after restarts or crashes and it is therefore important that the id is stable
@@ -275,7 +275,7 @@ http://kafka.apache.org/documentation/#configuration[Apache Kafka website].
 ===== Kafka authentication
 
 Kafka supports authentication Simple Authentication and Security Layer (SASL). SASL in Kafka is implemented using JAAS.
-SASL authentication is supported both through plain unecnrypted connections as well as through TLS connections. SASL can
+SASL authentication is supported both through plain unencrypted connections as well as through TLS connections. SASL can
 be enabled individually for each listener. To enable it, the security protocol in `listener.security.protocol.map` has
 to be either `SASL_PLAINTEXT` or `SASL_SSL`.
 
@@ -825,6 +825,35 @@ is `2`.
 
 ==== Other configuration options
 
-A list of all available configuration options can be found on the http://kafka.apache.org/documentation/#configuration[Apache Kafka website].
+A list of all available configuration options can be found on the
+http://kafka.apache.org/documentation/#configuration[Apache Kafka website].
 
 === Running Kafka
+
+Kafka broker can be started using a script `kafka-server-start.sh` which is part of the Kafka broker distribution. This
+script accepts the configuration file as parameter:
+
+[source]
+/opt/kafka/bin/kafka-server-start.sh /opt/kafka/config/kafka.properties
+
+By default `kafka-server-start.sh` starts Kafka in foreground. Adding option `-daemon` will start Kafka as background
+process. When the `-daemon` option is used, it has to be placed as a first parameter right after the
+`kafka-server-start.sh` script. Another option `--override` can be used to override properties in the configuration
+file. For example:
+
+[source]
+/opt/kafka/bin/kafka-server-start.sh -daemon /opt/kafka/config/kafka.properties --override broker.id=1
+
+Environment variable `KAFKA_OPTS` can be used to pass additional JVM options to Kafka. This is useful for example for
+specifying the JAAS configuration file when SASL authentication is used:
+
+[source]
+export KAFKA_OPTS="-Djava.security.auth.login.config=/opt/kafka/config/jaas.config"; \
+    /opt/kafka/bin/kafka-server-start.sh /opt/kafka/config/kafka.properties
+
+To stop running Kafka broker the script `kafka-server-stop.sh` can be used:
+
+[source]
+/opt/kafka/bin/kafka-server-stop.sh
+
+This script will find the PIDs of all running Kafka brokers and stop them.

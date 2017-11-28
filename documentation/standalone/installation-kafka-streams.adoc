@@ -1,0 +1,12 @@
+== Apache Kafka Streams APIs
+
+Kafka Streams API allows applications to receive data from input streams and process them into output streams. It is
+part of `kafka-streams` package which is available in Maven. To use Kafka Streams API following dependency should be
+added:
+
+[source]
+<dependency>
+    <groupId>org.apache.kafka</groupId>
+    <artifactId>kafka-streams</artifactId>
+    <version>1.0.0</version>
+</dependency>
