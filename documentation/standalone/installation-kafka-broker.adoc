@@ -171,11 +171,11 @@ KAFKA_OPTS="-Djava.security.auth.login.config=/path/to/my/jaas.config"; bin/kafk
 
 Security is in Kafka configured on the level of listeners. Configuration property `listener.security.protocol.map`
 defines which listener is using which security protocol. It contains map of listener names and maps them to security
-protocols. Supported security ptorocols are:
+protocols. Supported security protocols are:
 
 `PLAINTEXT`:: Listener without any encryption and authentication.
 `SSL`:: Listener using TLS encryption and optionally also authentication using TLS client certificates.
-`SASL_PLAINTEXT`:: Listener without anycryption but with SASL based authentication.
+`SASL_PLAINTEXT`:: Listener without encryption but with SASL based authentication.
 `SASL_SSL`:: Listener with TLS based encryption and SASL based authentication.
 
 Given the following `listeners` configuration:
@@ -265,7 +265,7 @@ In addition to the main TLS configuration options described above, Kafka support
 configuration. For example to enable of disable TLS / SSL protocols or cipher suites.
 
 `ssl.cipher.suites`:: List of cipher suites which should be enabled. Cipher suite is a combination of authentication,
-encryption, MAC and key exchange algorithmes used for the TLC connection. By default all available cipher suites are
+encryption, MAC and key exchange algorithms used for the TLC connection. By default all available cipher suites are
 enabled.
 `ssl.enabled.protocols`:: List of enabled TLS / SSL protocols. Defaults to `TLSv1.2,TLSv1.1,TLSv1`.
 
@@ -284,9 +284,9 @@ SASL authentication in Kafka support three different mechanisms:
 - `PLAIN` mechanism implements authentication based on username and passwords. Usernames and passwords are stored
 locally in Kafka configuration.
 - `SCRAM` mechanism implements authentication using Salted Challenge Response Authentication Mechanism. SCRAM
-credentials are stored centrally in Zookeeper. SCRAM can be used in situations where Zookeeper clster nodes are running
+credentials are stored centrally in Zookeeper. SCRAM can be used in situations where Zookeeper cluster nodes are running
 isolated in private network.
-- `GSSAPI` mechanism implementes authentication gaainst Kerberos server.
+- `GSSAPI` mechanism implements authentication against Kerberos server.
 
 TIP: `PLAIN` mechanism is sending username and password in unencrypted format. It should be therefore used only in
 combination with TLS encryption.
@@ -369,7 +369,7 @@ To delete a user credential use:
 [source]
 bin/kafka-configs.sh --zookeeper zoo1.my-domain.com:2181 --alter --delete-config 'SCRAM-SHA-512' --entity-type users --entity-name user1
 
-SASL mechanism used for authentication using KErberos is called `GSSAPI`. To configure Kerberos SASL authentication,
+SASL mechanism used for authentication using Kerberos is called `GSSAPI`. To configure Kerberos SASL authentication,
 following configuration should be added to the JAAS configuration file:
 
 [source]
@@ -389,7 +389,7 @@ sasl.enabled.mechanisms=GSSAPI
 sasl.mechanism.inter.broker.protocol=GSSAPI
 sasl.kerberos.service.name=kafka
 
-Kafka can use multiple SASL mechanisms at the same time. The different JAAS confiugrations can be all added to the same context:
+Kafka can use multiple SASL mechanisms at the same time. The different JAAS configurations can be all added to the same context:
 
 [source]
 ----
@@ -638,7 +638,7 @@ To add such ACL rules, following ACL rules can be used (principal should be adap
 configuration):
 
 [source]
-bin/kafka-acls.sh --authorizer-properties zookeeper.connect=zoo1.my-domain.com:2181 --add --operation Clusteraction --cluster --allow-principal User:kafka
+bin/kafka-acls.sh --authorizer-properties zookeeper.connect=zoo1.my-domain.com:2181 --add --operation ClusterAction --cluster --allow-principal User:kafka
 bin/kafka-acls.sh --authorizer-properties zookeeper.connect=zoo1.my-domain.com:2181 --add --operation Read --topic "*"
 
 ===== Zookeeper authentication
