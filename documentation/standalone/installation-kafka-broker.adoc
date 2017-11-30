@@ -473,7 +473,7 @@ Not every operation can be applied to every resource. Following table shows whic
 |X||
 
 |Create
-||X|
+|||X
 
 |Delete
 |X||
@@ -482,7 +482,7 @@ Not every operation can be applied to every resource. Following table shows whic
 |X||
 
 |Describe
-|X||X
+|X|X|X
 
 |ClusterAction
 |||X
