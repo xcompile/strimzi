@@ -1,10 +1,10 @@
 == Apache Kafka Producer and Consumer APIs
 
-Kafka Producer and Consumer API are together with Kafka AdminClient API part of `kafka-clients` package. Producer API
-allows applications to send data to Kafka broker. Consumer API allows applications to consumer data from Kafka broker.
-AdminClient API allows managing Kafka broker (topics, broker objects etc.).
+Kafka Producer and Consumer API are, together with Kafka AdminClient API, part of the `kafka-clients` package. The Producer API
+allows applications to send data to a Kafka broker. The Consumer API allows applications to consume data from a Kafka broker.
+The AdminClient API allows management of Kafka clusters (topics, brokers etc.).
 
-`kafka-clients` is available in Maven. To use the APIs which are part of `kafka-clients`, following dependency should
+The `kafka-clients` package is available in Maven. To use the APIs which are part of `kafka-clients`, following dependency should
 be added:
 
 [source]
