@@ -828,12 +828,29 @@ is `2`.
 A list of all available configuration options can be found on the
 http://kafka.apache.org/documentation/#configuration[Apache Kafka website].
 
+==== Logging
+
+Kafka broker is using _log4j_ as its logging infrastructure. Logging configuration is by default read from the
+`log4j.propeties` configuration file which should be placed either in the `/opt/kafka/config/` directory or
+in the classpath. The location and name of the configuration file can be changed using the Java property
+`log4j.configuration` which can be passed to Zookeeper using the `KAFKA_LOG4J_OPTS` environment variable:
+
+[source]
+----
+su - kafka
+export KAFKA_LOG4J_OPTS="-Dlog4j.configuration=file:/my/path/to/log4j.config"; /opt/kafka/bin/kafka-server-start.sh /opt/kafka/config/kafka.properties
+----
+
+More information about _log4j_ configuration can be found in the
+http://logging.apache.org/log4j/1.2/manual.html[_log4j_ manual].
+
 === Running Kafka
 
 Kafka broker can be started using a script, `kafka-server-start.sh`, which is part of the Kafka broker distribution. This
 script accepts the configuration file as parameter:
 
 [source]
+su - kafka
 /opt/kafka/bin/kafka-server-start.sh /opt/kafka/config/kafka.properties
 
 By default, `kafka-server-start.sh` starts Kafka in the foreground. Adding option `-daemon` will start Kafka as a background
@@ -842,18 +859,21 @@ process. When the `-daemon` option is used, it has to be placed as a first param
 file. For example:
 
 [source]
+su - kafka
 /opt/kafka/bin/kafka-server-start.sh -daemon /opt/kafka/config/kafka.properties --override broker.id=1
 
 The `KAFKA_OPTS` environment variable can be used to pass additional JVM options to Kafka. This is useful, for example, for
 specifying the JAAS configuration file when SASL authentication is used:
 
 [source]
+su - kafka
 export KAFKA_OPTS="-Djava.security.auth.login.config=/opt/kafka/config/jaas.config"; \
     /opt/kafka/bin/kafka-server-start.sh /opt/kafka/config/kafka.properties
 
 The `kafka-server-stop.sh` script can be used to stop all running Kafka brokers:
 
 [source]
+su - kafka
 /opt/kafka/bin/kafka-server-stop.sh
 
 This script will find the PIDs of all running Kafka brokers and stop them.

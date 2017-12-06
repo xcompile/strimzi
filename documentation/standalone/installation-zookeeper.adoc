@@ -199,6 +199,22 @@ Setting the following options should be considered, depending on the exact use c
 All available configuration options can be found in Apache Zookeeper
 http://zookeeper.apache.org/doc/current/zookeeperAdmin.html#sc_maintenance[documentation].
 
+=== Logging
+
+Zookeeper is using _log4j_ as its logging infrastructure. Logging configuration is by default read from the
+`log4j.propeties` configuration file which should be placed either in the `/opt/zookeeper/conf/` directory or
+in the classpath. The location and name of the configuration file can be changed using the Java property
+`log4j.configuration` which can be passed to Zookeeper using the `SERVER_JVMFLAGS` environment variable:
+
+[source]
+----
+su - zookeeper
+export SERVER_JVMFLAGS="-Dlog4j.configuration=file:/my/path/to/log4j.config"; /opt/zookeeper/bin/zkServer.sh start conf/zoo.cfg
+----
+
+More information about _log4j_ configuration can be found in the
+http://logging.apache.org/log4j/1.2/manual.html[_log4j_ manual].
+
 === Security
 
 ==== SASL Authentication
