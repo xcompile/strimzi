@@ -84,7 +84,7 @@ To deploy the Cluster Controller on OpenShift, run the following commands in you
 
 ```shell
 oc create -f examples/install/cluster-controller
-oc create -f examples/openshift/cluster-controller
+oc create -f examples/templates/cluster-controller
 ```
 
 You should be able to verify that the controller is running using:
@@ -143,8 +143,8 @@ strimzi.io/kind: cluster
 ```
 
 For more details about the ConfigMap format, have a look 
-into the example ConfigMaps for [ephemeral](examples/resources/cluster-controller/kafka-ephemeral.yaml) and 
-[persistent](examples/resources/cluster-controller/kafka-persistent.yaml) clusters.
+into the example ConfigMaps for [ephemeral](examples/configmaps/cluster-controller/kafka-ephemeral.yaml) and 
+[persistent](examples/configmaps/cluster-controller/kafka-persistent.yaml) clusters.
 
 ### Deploying to OpenShift
 
@@ -168,13 +168,13 @@ To deploy Kafka broker on Kubernetes, the corresponding ConfigMap has to be crea
 cluster, run following command in your terminal:
 
 ```shell
-kubectl apply -f examples/resources/cluster-controller/kafka-ephemeral.yaml
+kubectl apply -f examples/configmaps/cluster-controller/kafka-ephemeral.yaml
 ```
 
 To deploy the persistent Kafka cluster, run:
 
 ```shell
-kubectl apply -f examples/resources/cluster-controller/kafka-persistent.yaml
+kubectl apply -f examples/configmaps/cluster-controller/kafka-persistent.yaml
 ```
 
 ## Kafka Connect
@@ -201,7 +201,7 @@ To deploy Kafka Connect on Kubernetes, the corresponding ConfigMap has to be cre
 following command:
 
 ```shell
-kubectl apply -f examples/resources/cluster-controller/kafka-connect.yaml
+kubectl apply -f examples/configmaps/cluster-controller/kafka-connect.yaml
 ```
 
 ### Using Kafka Connect with additional plugins
@@ -230,7 +230,7 @@ USER kafka:kafka
 2. Build the Docker image and upload it to your Docker repository
 3. Use your new Docker image in your Kafka Connect deployment
   * On OpenShift, use the parameters `IMAGE_REPO_NAME`, `IMAGE_NAME` and `IMAGE_TAG` to specify your custom Docker image
-  * On Kubernetes, edit the [ConfigMap](examples/resources/cluster-controller/kafka-connect.yaml) and specify your Docker image.
+  * On Kubernetes, edit the [ConfigMap](examples/configmaps/cluster-controller/kafka-connect.yaml) and specify your Docker image.
 
 #### Using OpenShift Build and S2I image
 
