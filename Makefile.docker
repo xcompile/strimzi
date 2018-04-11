@@ -22,8 +22,6 @@ docker_tag:
 	echo "Tagging $(BUILD_IMAGE) to $(PUB_IMAGE) ..."
 	docker tag $(BUILD_IMAGE) $(PUB_IMAGE)
 
-docker_push:
-	#echo "Untagging $(BUILD_IMAGE) ..."
-	#docker rmi $(BUILD_IMAGE)
+docker_push: docker_tag
 	echo "Pushing $(PUB_IMAGE) ..."
 	docker push $(PUB_IMAGE)

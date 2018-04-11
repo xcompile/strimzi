@@ -13,9 +13,7 @@ make docker_build
 echo "Login into Docker Hub ..."
 docker login -u $DOCKER_USER -p $DOCKER_PASS
 
-DOCKER_TAG=$BRANCH make docker_tag
-
-DOCKER_TAG=$COMMIT make docker_tag
+DOCKER_TAG=$BRANCH make docker_push
 
 DOCKER_TAG=$COMMIT make docker_push
 
