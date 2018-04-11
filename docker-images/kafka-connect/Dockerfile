@@ -1,4 +1,4 @@
-FROM strimzi/kafka-base:latest
+FROM strimzi/kafka-base:build
 
 EXPOSE 8083
 

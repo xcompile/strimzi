@@ -1,4 +1,4 @@
-FROM strimzi/kafka-connect:latest
+FROM strimzi/kafka-connect:build
 
 USER root:root
 

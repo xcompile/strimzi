@@ -9,19 +9,21 @@
 DOCKERFILE_DIR     ?= ./
 DOCKER_REGISTRY    ?= docker.io
 DOCKER_ORG         ?= $(USER)
-DOCKER_TAG         ?= latest
-DOCKER_BUILD_TAG   ?= $(DOCKER_TAG)
+BUILD_IMAGE        ?= strimzi/$(PROJECT_NAME):build
+PUB_IMAGE          ?= $(DOCKER_REGISTRY)/$(DOCKER_ORG)/$(PROJECT_NAME):$(DOCKER_TAG)
 
-all: docker_build docker_push
+all: docker_build docker_tag docker_push
 
 docker_build:
 	echo "Building Docker image ..."
-	docker build -t strimzi/$(PROJECT_NAME):$(DOCKER_TAG) $(DOCKERFILE_DIR)
+	docker build -t $(BUILD_IMAGE) $(DOCKERFILE_DIR)
 
 docker_tag:
-	echo "Tagging strimzi/$(PROJECT_NAME):$(DOCKER_BUILD_TAG) to $(DOCKER_REGISTRY)/$(DOCKER_ORG)/$(PROJECT_NAME):$(DOCKER_TAG) ..."
-	docker tag strimzi/$(PROJECT_NAME):$(DOCKER_BUILD_TAG) $(DOCKER_REGISTRY)/$(DOCKER_ORG)/$(PROJECT_NAME):$(DOCKER_TAG)
+	echo "Tagging $(BUILD_IMAGE) to $(PUB_IMAGE) ..."
+	docker tag $(BUILD_IMAGE) $(PUB_IMAGE)
 
-docker_push: docker_tag
-	echo "Pushing $(DOCKER_REGISTRY)/$(DOCKER_ORG)/$(PROJECT_NAME):$(DOCKER_TAG) ..."
-	docker push $(DOCKER_REGISTRY)/$(DOCKER_ORG)/$(PROJECT_NAME):$(DOCKER_TAG)
+docker_push:
+	#echo "Untagging $(BUILD_IMAGE) ..."
+	#docker rmi $(BUILD_IMAGE)
+	echo "Pushing $(PUB_IMAGE) ..."
+	docker push $(PUB_IMAGE)
