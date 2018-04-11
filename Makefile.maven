@@ -6,9 +6,9 @@
 java_build:
 	echo "Building JAR file ..."
 ifndef CI
-	mvn package
+	mvn -DskipTests package
 else
-	mvn verify
+	mvn -DskipTests verify
 endif
 
 java_clean:
