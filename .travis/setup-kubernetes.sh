@@ -1,6 +1,8 @@
 #!/bin/bash
 set -x
 
+exit 0
+
 rm -rf ~/.kube
 
 function install_kubectl {
